@@ -210,7 +210,7 @@ local MainButton = MainTab:CreateButton({
       local Camera = workspace.CurrentCamera
       
       local orbiting = false
-      local orbitSpeed = 500
+      local orbitSpeed = 700
       local orbitRadius = 10
       local rotationAngle = 0
       local targetPlayer = nil
@@ -279,8 +279,6 @@ local MainButton = MainTab:CreateButton({
       
    end,
 })
-
-local MainSection = MainTab:CreateSection("Coming soon")
 
 local PlayerTab = Window:CreateTab("Player", nil) -- Title, Image
 local PlayerSection = PlayerTab:CreateSection("Player")
@@ -373,5 +371,97 @@ local PlayerButton = PlayerTab:CreateButton({
          character = char
       end)
       
+   end,
+})
+
+local CharacterTab = Window:CreateTab("Character", 4483362458) -- Title, Image
+
+local CharacterSection = CharacterTab:CreateSection("Esp")
+
+local CharacterButton = CharacterTab:CreateButton({
+   Name = "Esp",
+   Callback = function()
+   --// ESP Script with Tracers, DisplayName, Username, Distance, and Black Outline
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+-- Settings
+local tracerColor = Color3.new(1, 1, 1) -- white
+local textColor = Color3.new(1, 1, 1) -- white
+local font = Enum.Font.SourceSansBold
+local textSize = 14
+
+local espFolder = Instance.new("Folder", game.CoreGui)
+espFolder.Name = "ESPFolder"
+
+function createESP(player)
+	if player == LocalPlayer then return end
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "ESP"
+	billboard.AlwaysOnTop = true
+	billboard.Size = UDim2.new(0, 200, 0, 50)
+	billboard.StudsOffset = Vector3.new(0, 3, 0)
+
+	local textLabel = Instance.new("TextLabel", billboard)
+	textLabel.Size = UDim2.new(1, 0, 1, 0)
+	textLabel.BackgroundTransparency = 1
+	textLabel.TextColor3 = textColor
+	textLabel.TextStrokeColor3 = Color3.new(0, 0, 0) -- Black outline
+	textLabel.TextStrokeTransparency = 0 -- Fully visible stroke
+	textLabel.Font = font
+	textLabel.TextScaled = true
+	textLabel.Text = ""
+
+	billboard.Parent = espFolder
+
+	local tracer = Drawing.new("Line")
+	tracer.Thickness = 1.5
+	tracer.Color = tracerColor
+	tracer.Visible = false
+
+	local function update()
+		local character = player.Character
+		local hrp = character and character:FindFirstChild("HumanoidRootPart")
+		if hrp and character:FindFirstChild("Humanoid") and character:FindFirstChild("Head") then
+			local pos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+			if onScreen then
+				local distance = (Camera.CFrame.Position - hrp.Position).Magnitude
+				textLabel.Text = string.format("%s (%s)\n%.0f studs", player.DisplayName, player.Name, distance)
+				billboard.Adornee = hrp
+				billboard.Enabled = true
+
+				tracer.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+				tracer.To = Vector2.new(pos.X, pos.Y)
+				tracer.Visible = true
+			else
+				billboard.Enabled = false
+				tracer.Visible = false
+			end
+		else
+			billboard.Enabled = false
+			tracer.Visible = false
+		end
+	end
+
+	RunService.RenderStepped:Connect(function()
+		if player and player.Parent then
+			update()
+		else
+			billboard:Destroy()
+			tracer:Remove()
+		end
+	end)
+end
+
+-- Add ESP for existing players
+for _, player in ipairs(Players:GetPlayers()) do
+	createESP(player)
+end
+
+-- Add ESP for new players
+Players.PlayerAdded:Connect(createESP)
+
    end,
 })
