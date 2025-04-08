@@ -29,51 +29,77 @@
       Text = 'CamLock (C)',
       Default = false, -- Default value (true / false)
       Tooltip = '', -- Information shown when you hover over the toggle
+      local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
-      Callback = function(Value)
-         local player = game.Players.LocalPlayer
-         local mouse = player:GetMouse()
-         local Aiming = false
-         
-         function AimLock()
-            local target
-            local lastMagnitude = math.huge -- Start with a high value for comparison
-            for _, v in pairs(game.Players:GetPlayers()) do
-               if v ~= player and v.Character and v.Character.PrimaryPart then
-                  local charPos = v.Character.PrimaryPart.Position
-                  local mousePos = mouse.Hit.p
-                  if (charPos - mousePos).Magnitude < lastMagnitude then
-                     lastMagnitude = (charPos - mousePos).Magnitude
-                     target = v
-                  end
-               end
-            end
-         
-            if target and target.Character and target.Character.PrimaryPart then
-               local charPos = target.Character.PrimaryPart.Position
-               local cam = workspace.CurrentCamera
-               local pos = cam.CFrame.Position
-         
-               -- Set the camera CFrame to aim at the target
-               workspace.CurrentCamera.CFrame = CFrame.new(pos, charPos) -- Update camera orientation
-            end
-         end
-         
-         local UserInputService = game:GetService("UserInputService")
-         
-         -- Toggle aiming with "E"
-         UserInputService.InputBegan:Connect(function(input, gameProcessed)
-            if not gameProcessed and input.KeyCode == Enum.KeyCode.C then
-               Aiming = not Aiming -- Toggle aiming state
-            end
-         end)
-         
-         -- Run AimLock while Aiming is true
-         game:GetService("RunService").RenderStepped:Connect(function()
-            if Aiming then
-               AimLock()
-            end
-         end)
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+
+local isLockedOn = false
+local currentTarget = nil
+local allTargets = {}
+local targetIndex = 0
+local lockRange = 100 -- studs
+
+-- Function to get all valid players within range (except local player)
+local function getNearbyTargets()
+	local nearby = {}
+	for _, otherPlayer in ipairs(Players:GetPlayers()) do
+		if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+			local dist = (otherPlayer.Character.HumanoidRootPart.Position - player.Character.HumanoidRootPart.Position).Magnitude
+			if dist <= lockRange then
+				table.insert(nearby, otherPlayer)
+			end
+		end
+	end
+	return nearby
+end
+
+-- Function to start locking onto a player
+local function lockOn()
+	allTargets = getNearbyTargets()
+	if #allTargets == 0 then
+		currentTarget = nil
+		return
+	end
+
+	-- Cycle to the next target
+	targetIndex = targetIndex + 1
+	if targetIndex > #allTargets then
+		targetIndex = 1
+	end
+
+	currentTarget = allTargets[targetIndex]
+	isLockedOn = true
+end
+
+-- Function to unlock
+local function unlock()
+	isLockedOn = false
+	currentTarget = nil
+end
+
+-- Toggle lock/unlock
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then return end
+	if input.KeyCode == Enum.KeyCode.C then
+		if isLockedOn then
+			unlock()
+		else
+			lockOn()
+		end
+	end
+end)
+
+-- Optional: Keep camera looking at the target (can be disabled if you don’t want camera focus)
+RunService.RenderStepped:Connect(function()
+	if isLockedOn and currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
+		local targetPart = currentTarget.Character.HumanoidRootPart
+		camera.CFrame = CFrame.new(camera.CFrame.Position, targetPart.Position)
+	end
+end)
+
       end
    })
 
